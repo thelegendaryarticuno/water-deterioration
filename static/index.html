@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Urban Water Quality Early Warning</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <!-- PapaParse for robust CSV parsing in the browser -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>💧 Urban Water Quality Early-Warning Dashboard</h1>
+  </header>
+
+  <main>
+    <div class="tabs">
+      <button class="tab-button active" data-tab="brisbane">🌊 Brisbane River</button>
+      <button class="tab-button" data-tab="nyc">🚰 NYC Drinking Water</button>
+    </div>
+
+    <!-- Brisbane Tab -->
+    <section id="tab-brisbane" class="tab active">
+      <h2>Brisbane River – Early Water Quality Deterioration
+        <button id="open-glossary" class="ghost" type="button" title="Open glossary and ranges">Glossary & Ranges</button>
+      </h2>
+      <p>
+        Upload a recent slice of <strong>Brisbane sensor data</strong> in the same
+        format as <code>brisbane_water_quality.csv</code> (must include
+        <code>Timestamp</code>, <code>Dissolved Oxygen</code>, <code>Turbidity</code>,
+        <code>pH</code>, <code>Salinity</code>, <code>Temperature</code>,
+        <code>Specific Conductance</code>, <code>Chlorophyll</code>, plus
+        <code>Average Water Speed</code> and <code>Average Water Direction</code>).
+      </p>
+
+      <div class="form-row">
+        <input type="file" id="brisbane-file" accept=".csv" />
+        <button id="brisbane-predict" class="primary" type="button">Predict Latest Row</button>
+        <button id="brisbane-batch-download" class="primary" type="button" title="Predict all rows in the CSV and download a results CSV">Predict Full CSV & Download</button>
+      </div>
+
+      <div class="preview" id="brisbane-preview"></div>
+
+      <div class="result" id="brisbane-result">
+        <div class="metric">
+          <div class="metric-label">Risk of Deterioration Soon</div>
+          <div class="metric-value" id="brisbane-prob">–</div>
+          <div class="metric-help" id="brisbane-threshold"></div>
+        </div>
+        <h3 id="brisbane-label"></h3>
+        <div class="error" id="brisbane-error"></div>
+      </div>
+
+      <hr />
+  <h3>Single Reading (Manual Entry)</h3>
+      <div class="grid-2">
+        <div>
+          <label for="br-date">Timestamp Date</label>
+          <input type="date" id="br-date" />
+        </div>
+        <div>
+          <label for="br-time">Timestamp Time</label>
+          <input type="time" id="br-time" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label for="br-speed">Average Water Speed (m/s) <span class="tip" data-tip="Speed of water flow at the sensor location.">?</span></label>
+          <input type="number" id="br-speed" step="0.01" />
+        </div>
+        <div>
+          <label for="br-direction">Average Water Direction (degrees) <span class="tip" data-tip="Compass direction of flow (0–360°).">?</span></label>
+          <input type="number" id="br-direction" step="0.01" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label for="br-chl">Chlorophyll (µg/L) <span class="tip" data-tip="Proxy for algal biomass; elevated values can indicate algal blooms.">?</span></label>
+          <input type="number" id="br-chl" step="0.01" />
+        </div>
+        <div>
+          <label for="br-temp">Temperature (°C) <span class="tip" data-tip="Water temperature; affects solubility of oxygen and biological activity.">?</span></label>
+          <input type="number" id="br-temp" step="0.01" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label for="br-do">Dissolved Oxygen (mg/L) <span class="tip" data-tip="Oxygen dissolved in water; critical for aquatic life.">?</span></label>
+          <input type="number" id="br-do" step="0.01" />
+        </div>
+        <div>
+          <label for="br-dosat">Dissolved Oxygen (% Saturation) <span class="tip" data-tip="Percent of oxygen saturation relative to temperature and pressure.">?</span></label>
+          <input type="number" id="br-dosat" step="0.01" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label for="br-ph">pH (units) <span class="tip" data-tip="Acidity/alkalinity; logarithmic scale.">?</span></label>
+          <input type="number" id="br-ph" step="0.01" />
+        </div>
+        <div>
+          <label for="br-sal">Salinity (ppt) <span class="tip" data-tip="Total dissolved salts; practical salinity units.">?</span></label>
+          <input type="number" id="br-sal" step="0.01" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label for="br-sc">Specific Conductance (µS/cm) <span class="tip" data-tip="Electrical conductivity corrected to 25°C; related to ionic content.">?</span></label>
+          <input type="number" id="br-sc" step="0.01" />
+        </div>
+        <div>
+          <label for="br-turb">Turbidity (NTU) <span class="tip" data-tip="Water clarity; higher values indicate more suspended particles.">?</span></label>
+          <input type="number" id="br-turb" step="0.01" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <button id="brisbane-manual-predict" class="primary" type="button">Predict Single Reading</button>
+        <div class="error" id="brisbane-manual-error"></div>
+      </div>
+      <section class="knowledge" id="brisbane-knowledge">
+        <h3>Brisbane River – Typical Ranges (Reference)</h3>
+        <ul>
+          <li>Temperature: 15–30 °C</li>
+          <li>pH: 6.5–8.5 (units)</li>
+          <li>Dissolved Oxygen: 5–12 mg/L (often >6 mg/L for healthy systems)</li>
+          <li>Dissolved Oxygen (% Saturation): 80–120%</li>
+          <li>Turbidity: 0–50 NTU (lower is clearer; spikes can indicate events)</li>
+          <li>Salinity: 0–35 ppt (fresh to marine; river sections typically low ppt)</li>
+          <li>Specific Conductance: 50–2000 µS/cm (site-dependent)</li>
+          <li>Chlorophyll: 0–50 µg/L (elevated values may indicate algal activity)</li>
+        </ul>
+        <p class="note">These are broad indicative ranges for surface waters; local conditions vary by site and season.</p>
+      </section>
+    </section>
+
+    <!-- NYC Tab -->
+    <section id="tab-nyc" class="tab">
+      <h2>NYC Drinking Water – Microbial Failure Risk
+        <button id="open-glossary-nyc" class="ghost" type="button" title="Open glossary and ranges">Glossary & Ranges</button>
+      </h2>
+      <p>Evaluate <strong>microbial failure risk</strong> for individual samples.</p>
+
+      <div class="grid-2">
+        <div>
+          <label for="nyc-date">Sample Date</label>
+          <input type="date" id="nyc-date" />
+        </div>
+        <div>
+          <label for="nyc-time">Sample Time</label>
+          <input type="time" id="nyc-time" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="nyc-class">Sample class</label>
+        <select id="nyc-class">
+          <option>Compliance</option>
+          <option>Operational</option>
+          <option>Entry Point</option>
+          <option>Re-Sample</option>
+          <option>Op-resample</option>
+          <option>Resample_Compliance</option>
+          <option>Resample_Operational</option>
+        </select>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label for="nyc-chlorine">Residual Free Chlorine (mg/L) <span class="tip" data-tip="Disinfectant residual; ensures microbial safety in distribution.">?</span></label>
+          <input type="number" id="nyc-chlorine" min="0" max="3" step="0.01" value="0.6" />
+        </div>
+        <div>
+          <label for="nyc-turbidity">Turbidity (NTU) <span class="tip" data-tip="Water clarity; monitored for filtration performance and distribution quality.">?</span></label>
+          <input type="number" id="nyc-turbidity" min="0" max="5" step="0.01" value="0.5" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <button id="nyc-predict" class="primary">Predict Failure Risk</button>
+      </div>
+
+      <div class="result" id="nyc-result">
+        <div class="metric">
+          <div class="metric-label">Microbial Failure Probability</div>
+          <div class="metric-value" id="nyc-prob">–</div>
+          <div class="metric-help" id="nyc-threshold"></div>
+        </div>
+        <h3 id="nyc-label"></h3>
+        <div class="error" id="nyc-error"></div>
+      </div>
+      <section class="knowledge" id="nyc-knowledge">
+        <h3>NYC Drinking Water – Typical Guidance (Reference)</h3>
+        <ul>
+          <li>Residual Free Chlorine: 0.2–2.0 mg/L (post-distribution residuals commonly 0.2–1.0 mg/L)</li>
+          <li>Turbidity: ≤ 1 NTU operational target; ≤ 0.3 NTU (95% of samples) typical filter effluent goal</li>
+          <li>pH (general distribution): ~7.0–8.5 units</li>
+        </ul>
+        <p class="note">Consult local regulations and utility standards for authoritative limits; values above are general references.</p>
+      </section>
+    </section>
+
+    <!-- Glossary Modal -->
+    <div id="glossary-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Water Parameter Glossary & Ranges</h3>
+          <button id="close-glossary" class="ghost" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+          <h4>Brisbane Parameters</h4>
+          <ul>
+            <li><strong>Temperature (°C):</strong> 15–30 typical.</li>
+            <li><strong>pH (units):</strong> 6.5–8.5 typical.</li>
+            <li><strong>Dissolved Oxygen (mg/L):</strong> 5–12 typical; often >6 healthy.</li>
+            <li><strong>DO % Saturation:</strong> 80–120% typical.</li>
+            <li><strong>Turbidity (NTU):</strong> 0–50 typical for rivers; lower is clearer.</li>
+            <li><strong>Salinity (ppt):</strong> 0–35 from fresh to marine; river reaches usually lower.</li>
+            <li><strong>Specific Conductance (µS/cm):</strong> 50–2000 site dependent.</li>
+            <li><strong>Chlorophyll (µg/L):</strong> 0–50 typical; higher may indicate algae.</li>
+          </ul>
+          <h4>NYC Parameters</h4>
+          <ul>
+            <li><strong>Residual Free Chlorine (mg/L):</strong> 0.2–2.0 typical in distribution.</li>
+            <li><strong>Turbidity (NTU):</strong> ≤1 operational target; ≤0.3 (95%) filter effluent goal.</li>
+          </ul>
+          <p class="note">Ranges are indicative and not regulatory limits. Check local standards.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <a href="/health" target="_blank">API health</a>
+  </footer>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
