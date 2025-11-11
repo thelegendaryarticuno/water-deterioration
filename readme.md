@@ -8,7 +8,7 @@ A FastAPI + Vanilla HTML/CSS/JS application that provides:
 Models were trained and experimentation performed in Kaggle: **Predictive Precision Notebook**  
 Kaggle link: https://www.kaggle.com/code/namanmani/predctive-precision
 
-> This repository contains only the serving layer (FastAPI + static frontend) and pre-trained model artifacts. Training code, detailed EDA, and experimentation are in the Kaggle notebook linked above.
+> This repository contains only the serving layer (FastAPI + static frontend) and pre-trained model artifacts. Training code, detailed EDA, and experimentation are in the Kaggle notebook linked above and a detailed explanation of code has been done there.
 
 ---
 
